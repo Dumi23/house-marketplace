@@ -5,6 +5,7 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
 import OAuth from '../components/OAuth'
 import { ReactComponent as ArrowRightIcon } from '../assets/svg/keyboardArrowRightIcon.svg'
 import visibilityIcon from '../assets/svg/visibilityIcon.svg'
+import axios from 'axios'
 
 function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
@@ -13,6 +14,12 @@ function SignIn() {
     password: '',
   })
   const { email, password } = formData
+
+
+function login() {
+
+}
+
 
   const navigate = useNavigate()
 
@@ -27,17 +34,10 @@ function SignIn() {
     e.preventDefault()
 
     try {
-      const auth = getAuth()
-
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
+      return axios.post("http://127.0.0.1:8000/api/login", {
         email,
-        password
-      )
-
-      if (userCredential.user) {
-        navigate('/')
-      }
+        password,
+      }).then((response) => localStorage.setItem('token', response.data['token'],navigate('/', {state:{token:response.data['token']}}))).catch((error) => toast.error(error.response.data['message']))
     } catch (error) {
       toast.error('Bad User Credentials')
     }

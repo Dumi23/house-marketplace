@@ -1,7 +1,10 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useRoutes, useLocation } from 'react-router-dom'
 import Slider from '../components/Slider'
 import rentCategoryImage from '../assets/jpg/rentCategoryImage.jpg'
 import sellCategoryImage from '../assets/jpg/sellCategoryImage.jpg'
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+
 
 function Explore() {
   return (

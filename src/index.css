@@ -741,6 +741,7 @@ button {
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
 }
 .formButtonActive {
   background-color: #00cc66;

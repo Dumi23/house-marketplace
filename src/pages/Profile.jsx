@@ -17,55 +17,41 @@ import { toast } from 'react-toastify'
 import ListingItem from '../components/ListingItem'
 import arrowRight from '../assets/svg/keyboardArrowRightIcon.svg'
 import homeIcon from '../assets/svg/homeIcon.svg'
+import axios from 'axios'
 
 function Profile() {
-  const auth = getAuth()
+  const [user, setUser] = useState({})
   const [loading, setLoading] = useState(true)
   const [listings, setListings] = useState(null)
   const [changeDetails, setChangeDetails] = useState(false)
   const [formData, setFormData] = useState({
-    name: auth.currentUser.displayName,
-    email: auth.currentUser.email,
+    name: user['username'],
+    email: user['email']
   })
 
+  console.log(user)
   const { name, email } = formData
 
   const navigate = useNavigate()
 
   useEffect(() => {
-    const fetchUserListings = async () => {
-      const listingsRef = collection(db, 'listings')
-
-      const q = query(
-        listingsRef,
-        where('userRef', '==', auth.currentUser.uid),
-        orderBy('timestamp', 'desc')
-      )
-
-      const querySnap = await getDocs(q)
-
-      let listings = []
-
-      querySnap.forEach((doc) => {
-        return listings.push({
-          id: doc.id,
-          data: doc.data(),
-        })
-      })
-
-      setListings(listings)
-      setLoading(false)
-    }
-
-    fetchUserListings()
-  }, [auth.currentUser.uid])
+      axios.get('http://127.0.0.1:8000/api/me',{
+        headers: {
+          'Authorization': "Bearer " + localStorage.getItem('token')
+        }
+      }).then((response) => setUser(response.data)).catch((error) => {if (error.response.status == 401){
+        localStorage.clear('token')
+        navigate('/')
+      }})
+  
+  }, [])
 
   const onLogout = () => {
-    auth.signOut()
+    localStorage.clear('token')
     navigate('/')
   }
 
-  const onSubmit = async () => {
+  /*const onSubmit = async () => {
     try {
       if (auth.currentUser.displayName !== name) {
         // Update display name in fb
@@ -83,7 +69,7 @@ function Profile() {
       console.log(error)
       toast.error('Could not update profile details')
     }
-  }
+  }*/
 
   const onChange = (e) => {
     setFormData((prevState) => ({
@@ -120,7 +106,7 @@ function Profile() {
           <p
             className='changePersonalDetails'
             onClick={() => {
-              changeDetails && onSubmit()
+              changeDetails && //onSubmit()
               setChangeDetails((prevState) => !prevState)
             }}
           >
@@ -135,7 +121,7 @@ function Profile() {
               id='name'
               className={!changeDetails ? 'profileName' : 'profileNameActive'}
               disabled={!changeDetails}
-              value={name}
+              value={user['username']}
               onChange={onChange}
             />
             <input
@@ -143,17 +129,19 @@ function Profile() {
               id='email'
               className={!changeDetails ? 'profileEmail' : 'profileEmailActive'}
               disabled={!changeDetails}
-              value={email}
+              value={user['email']}
               onChange={onChange}
             />
           </form>
         </div>
 
+      {!user['type'] == 0 &&
         <Link to='/create-listing' className='createListing'>
           <img src={homeIcon} alt='home' />
           <p>Sell or rent your home</p>
           <img src={arrowRight} alt='arrow right' />
         </Link>
+      }
 
         {!loading && listings?.length > 0 && (
           <>
