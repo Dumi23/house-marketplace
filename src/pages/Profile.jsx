@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getAuth, updateProfile } from 'firebase/auth'
 import {
@@ -16,35 +16,48 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import ListingItem from '../components/ListingItem'
 import arrowRight from '../assets/svg/keyboardArrowRightIcon.svg'
+import dring from '../assets/svg/dring.svg'
 import homeIcon from '../assets/svg/homeIcon.svg'
 import axios from 'axios'
+import ListingItemUser from '../components/ListingItemUser'
 
 function Profile() {
-  const [user, setUser] = useState({})
+  const [user, setUser] = useState([])
   const [loading, setLoading] = useState(true)
-  const [listings, setListings] = useState(null)
+  const [listings, setListings] = useState([])
+  const [locales, setLocales] = useState([])
   const [changeDetails, setChangeDetails] = useState(false)
   const [formData, setFormData] = useState({
-    name: user['username'],
-    email: user['email']
+    name: "Placeholder",
+    email: "Placeholder",
   })
 
-  console.log(user)
   const { name, email } = formData
 
   const navigate = useNavigate()
+  const isMounted = useRef(true)
+  const fetchUser = async () => {
+    await axios.get('http://127.0.0.1:8000/api/me',{
+      headers: {
+        'Authorization': "Bearer " + localStorage.getItem('token')
+      }
+    }).then((response) => {setUser(response.data.user_data); setLocales(response.data.results)}).catch((error) => {if (error.response.status != 200){
+      localStorage.clear('token')
+      navigate('/sign-in')
+    }})
+  }
+
+  console.log(locales)
 
   useEffect(() => {
-      axios.get('http://127.0.0.1:8000/api/me',{
-        headers: {
-          'Authorization': "Bearer " + localStorage.getItem('token')
-        }
-      }).then((response) => setUser(response.data)).catch((error) => {if (error.response.status == 401){
-        localStorage.clear('token')
-        navigate('/')
-      }})
-  
+    if(isMounted){
+      fetchUser()
+    }
+    return () => {
+      isMounted.current = false
+    }
   }, [])
+
 
   const onLogout = () => {
     localStorage.clear('token')
@@ -89,7 +102,7 @@ function Profile() {
     }
   }
 
-  const onEdit = (listingId) => navigate(`/edit-listing/${listingId}`)
+  const onEdit = (listingSlug) => navigate(`/edit-listing/${listingSlug}`)
 
   return (
     <div className='profile'>
@@ -137,23 +150,23 @@ function Profile() {
 
       {!user['type'] == 0 &&
         <Link to='/create-listing' className='createListing'>
-          <img src={homeIcon} alt='home' />
-          <p>Sell or rent your home</p>
+          <img src={dring} alt='home' />
+          <p>Create Your Locale</p>
           <img src={arrowRight} alt='arrow right' />
         </Link>
       }
 
-        {!loading && listings?.length > 0 && (
+        {locales?.length > 0 && (
           <>
-            <p className='listingText'>Your Listings</p>
-            <ul className='listingsList'>
-              {listings.map((listing) => (
-                <ListingItem
-                  key={listing.id}
-                  listing={listing.data}
-                  id={listing.id}
-                  onDelete={() => onDelete(listing.id)}
-                  onEdit={() => onEdit(listing.id)}
+            <p className='listingText' >Your Locales</p>
+            <ul className='listingsList' style={{paddingLeft: "0px"}}>
+              {locales.map((locale) => (
+                <ListingItemUser
+                  key={locale.slug}
+                  listing={locale}
+                  id={locale.slug}
+                  onDelete={() => onDelete(locale.slug)}
+                  onEdit={() => onEdit(locale.slug)}
                 />
               ))}
             </ul>

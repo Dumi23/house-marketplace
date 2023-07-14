@@ -34,7 +34,7 @@ function App() {
           <Route path='/create-listing' element={<CreateListing />} />
           <Route path='/edit-listing/:listingId' element={<EditListing />} />
           <Route
-            path='/category/:categoryName/:listingId'
+            path='/locale/:listingId'
             element={<Listing />}
           />
           <Route path='/contact/:landlordId' element={<Contact />} />

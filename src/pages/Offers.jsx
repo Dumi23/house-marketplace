@@ -11,106 +11,45 @@ import {
 import { db } from '../firebase.config'
 import { toast } from 'react-toastify'
 import Spinner from '../components/Spinner'
-import ListingItem from '../components/ListingItem'
+import EventItem from '../components/EventItem'
+import axios from 'axios'
+
 
 function Offers() {
-  const [listings, setListings] = useState(null)
+  const [events, setEvents] = useState(null)
   const [loading, setLoading] = useState(true)
   const [lastFetchedListing, setLastFetchedListing] = useState(null)
 
-  useEffect(() => {
-    const fetchListings = async () => {
-      try {
-        // Get reference
-        const listingsRef = collection(db, 'listings')
-
-        // Create a query
-        const q = query(
-          listingsRef,
-          where('offer', '==', true),
-          orderBy('timestamp', 'desc'),
-          limit(10)
-        )
-
-        // Execute query
-        const querySnap = await getDocs(q)
-
-        const lastVisible = querySnap.docs[querySnap.docs.length - 1]
-        setLastFetchedListing(lastVisible)
-
-        const listings = []
-
-        querySnap.forEach((doc) => {
-          return listings.push({
-            id: doc.id,
-            data: doc.data(),
-          })
-        })
-
-        setListings(listings)
-        setLoading(false)
-      } catch (error) {
-        toast.error('Could not fetch listings')
-      }
+  const fetchUserFeed = async () => {
+    if(localStorage.getItem("token") === null){
+      await axios.get(`http://127.0.0.1:8000/club/events`).then((response) =>{setEvents(response.data.results)}).catch(error => console.log(error))  
     }
-
-    fetchListings()
-  }, [])
-
-  // Pagination / Load More
-  const onFetchMoreListings = async () => {
-    try {
-      // Get reference
-      const listingsRef = collection(db, 'listings')
-
-      // Create a query
-      const q = query(
-        listingsRef,
-        where('offer', '==', true),
-        orderBy('timestamp', 'desc'),
-        startAfter(lastFetchedListing),
-        limit(10)
-      )
-
-      // Execute query
-      const querySnap = await getDocs(q)
-
-      const lastVisible = querySnap.docs[querySnap.docs.length - 1]
-      setLastFetchedListing(lastVisible)
-
-      const listings = []
-
-      querySnap.forEach((doc) => {
-        return listings.push({
-          id: doc.id,
-          data: doc.data(),
-        })
-      })
-
-      setListings((prevState) => [...prevState, ...listings])
-      setLoading(false)
-    } catch (error) {
-      toast.error('Could not fetch listings')
-    }
+    await axios.get(`http://127.0.0.1:8000/club/events`,{headers: {'Authorization': "Bearer " + localStorage.getItem('token')}}).then((response) =>{setEvents(response.data.results)}).catch(error => console.log(error))
   }
+
+
+  useEffect(() => {
+    fetchUserFeed()
+    setLoading(false)
+  }, [])
 
   return (
     <div className='category'>
       <header>
-        <p className='pageHeader'>Offers</p>
+        <p className='pageHeader'>Events</p>
       </header>
 
       {loading ? (
         <Spinner />
-      ) : listings && listings.length > 0 ? (
+      ) : events && events.length > 0 ? (
         <>
           <main>
             <ul className='categoryListings'>
-              {listings.map((listing) => (
-                <ListingItem
-                  listing={listing.data}
-                  id={listing.id}
-                  key={listing.id}
+              {events.map((event) => (
+                <EventItem
+                  listing={event}
+                  id={event.id}
+                  key={event.id}
                 />
               ))}
             </ul>
@@ -118,11 +57,6 @@ function Offers() {
 
           <br />
           <br />
-          {lastFetchedListing && (
-            <p className='loadMore' onClick={onFetchMoreListings}>
-              Load More
-            </p>
-          )}
         </>
       ) : (
         <p>There are no current offers</p>

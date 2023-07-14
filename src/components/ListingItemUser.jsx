@@ -6,7 +6,7 @@ import bathtubIcon from '../assets/svg/bathtubIcon.svg'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 
-function ListingItem({ listing, id, onEdit, onDelete }) {
+function ListingItemUser({ listing, id, onEdit, onDelete }) {
   function imageHandler(){
     if (listing.image == null){
       return 'https://www.jennybeaumont.com/wp-content/uploads/2015/03/placeholder-800x423.gif'
@@ -16,7 +16,7 @@ function ListingItem({ listing, id, onEdit, onDelete }) {
   return (
     <li className='categoryListing'>
       <Link
-        to={`/locale/${listing.slug}`}
+        to={`/edit-listing/${listing.slug}`}
         className='categoryListingLink'
       >
         <img
@@ -32,9 +32,9 @@ function ListingItem({ listing, id, onEdit, onDelete }) {
           </p>
           <div className='categoryListingInfoDiv'>
             <p className='categoryListingInfoText'>
-              {listing.description}
             </p>
             <p className='categoryListingInfoText'>
+              {listing.description}
             </p>
           </div>
         </div>
@@ -48,8 +48,9 @@ function ListingItem({ listing, id, onEdit, onDelete }) {
         />
       )}
 
+      {onEdit && <EditIcon className='editIcon' onClick={() => onEdit(id)} />}
     </li>
   )
 }
 
-export default ListingItem
+export default ListingItemUser

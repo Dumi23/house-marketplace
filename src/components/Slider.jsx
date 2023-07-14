@@ -16,7 +16,10 @@ function Slider() {
   const navigate = useNavigate()
 
   const fetchUserFeed = async () => {
-    await axios.get(`http://127.0.0.1:8000/club/feed`,{headers: {'Authorization': "Bearer " + localStorage.getItem('token')}}).then((response) =>{setListings(response.data.results)}).catch(error => console.log(error))
+    if (localStorage.getItem("token") === null){
+      await axios.get(`http://127.0.0.1:8000/club/feed`).then((response) =>{setListings(response.data.results)}).catch(error => console.log(error))  
+    }
+    await axios.get(`http://127.0.0.1:8000/club/feed`,{headers: {'Authorization': "Bearer " + localStorage.getItem('token')}}).then((response) =>{setListings(response.data.results)}).catch(error => console.log(error))  
   }
 
   console.log(listings)
@@ -42,8 +45,8 @@ function Slider() {
         <Swiper slidesPerView={1} pagination={{ clickable: true }}>
           {listings.map((data) => (
             <SwiperSlide
-              key={data.name}
-              onClick={() => navigate(`/category/${data.type}/${data.name}`)}
+              key={data.slug}
+              onClick={() => navigate(`/locale/${data.slug}`)}
             >
               <div
                 style={{
@@ -52,7 +55,7 @@ function Slider() {
                 }}
                 className='swiperSlideDiv'
               >
-                <p className='swiperSlideText'>{data.address.street_name}</p>
+                <p className='swiperSlideText'>{data.name}</p>
                 <p className='swiperSlidePrice'>
                   {data.type.name}
                 </p>

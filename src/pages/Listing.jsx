@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet'
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import SwiperCore, { Navigation, Pagination, Scrollbar, A11y } from 'swiper'
+import { toast } from 'react-toastify'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import 'swiper/swiper-bundle.css'
 import { getDoc, doc } from 'firebase/firestore'
@@ -10,30 +11,34 @@ import { getAuth } from 'firebase/auth'
 import { db } from '../firebase.config'
 import Spinner from '../components/Spinner'
 import shareIcon from '../assets/svg/shareIcon.svg'
+import axios from 'axios'
+import ListingItem from '../components/ListingItem'
 SwiperCore.use([Navigation, Pagination, Scrollbar, A11y])
 
 function Listing() {
-  const [listing, setListing] = useState(null)
+  const [listing, setListing] = useState({})
   const [loading, setLoading] = useState(true)
   const [shareLinkCopied, setShareLinkCopied] = useState(false)
+  const [modal, setModal] = useState(false)
 
   const navigate = useNavigate()
   const params = useParams()
   const auth = getAuth()
 
-  useEffect(() => {
-    const fetchListing = async () => {
-      const docRef = doc(db, 'listings', params.listingId)
-      const docSnap = await getDoc(docRef)
+  const toggleModal = () => {
+    setModal(!modal)
+  }
 
-      if (docSnap.exists()) {
-        setListing(docSnap.data())
+  useEffect(() => {
+    const fetchLocale = async () => {
+      await axios.get(`http://127.0.0.1:8000/club/locale/${params.listingId}`).then((response) => {setListing(response.data)}).catch((error) => toast.error("Something went wrong"))
+      if (listing) {
         setLoading(false)
       }
     }
+    fetchLocale()
+  }, [navigate, params.listingSlug])
 
-    fetchListing()
-  }, [navigate, params.listingId])
 
   if (loading) {
     return <Spinner />
@@ -45,19 +50,17 @@ function Listing() {
         <title>{listing.name}</title>
       </Helmet>
       <Swiper slidesPerView={1} pagination={{ clickable: true }}>
-        {listing.imgUrls.map((url, index) => (
-          <SwiperSlide key={index}>
+          <SwiperSlide>
             <div
               style={{
-                background: `url(${listing.imgUrls[index]}) center no-repeat`,
+                background: `url(http://127.0.0.1:8000${listing.image}) center no-repeat`,
                 backgroundSize: 'cover',
               }}
               className='swiperSlideDiv'
+              onClick={() => console.log("clicked")}
             ></div>
           </SwiperSlide>
-        ))}
       </Swiper>
-
       <div
         className='shareIconDiv'
         onClick={() => {
@@ -75,46 +78,59 @@ function Listing() {
 
       <div className='listingDetails'>
         <p className='listingName'>
-          {listing.name} - $
-          {listing.offer
-            ? listing.discountedPrice
-                .toString()
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-            : listing.regularPrice
-                .toString()
-                .replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          {listing.name}
         </p>
-        <p className='listingLocation'>{listing.location}</p>
+        <p className='listingLocation'>{listing.street_name}</p>
         <p className='listingType'>
-          For {listing.type === 'rent' ? 'Rent' : 'Sale'}
+          {listing.type.name}
         </p>
-        {listing.offer && (
+        {listing.music.map((data) =>
           <p className='discountPrice'>
-            ${listing.regularPrice - listing.discountedPrice} discount
+            {data.genre}
           </p>
         )}
 
         <ul className='listingDetailsList'>
           <li>
-            {listing.bedrooms > 1
-              ? `${listing.bedrooms} Bedrooms`
-              : '1 Bedroom'}
           </li>
           <li>
-            {listing.bathrooms > 1
-              ? `${listing.bathrooms} Bathrooms`
-              : '1 Bathroom'}
           </li>
           <li>{listing.parking && 'Parking Spot'}</li>
           <li>{listing.furnished && 'Furnished'}</li>
         </ul>
+        <div className='category'>
+      <header>
+        <p className='pageHeader'>Events</p>
+      </header>
+
+      {listing.events && listing.events.length > 0 ? (
+        <>
+          <main>
+            <ul className='categoryListings'>
+              {listing.events.map((data) => (
+                <ListingItem
+                  listing={data}
+                  id={data.slug}
+                  key={data.slug}
+                />
+              ))}
+            </ul>
+          </main>
+
+          <br />
+          <br />
+        </>
+      ) : (
+        <p>There are no events for this locale</p>
+      )}
+    </div>
 
         <p className='listingLocationTitle'>Location</p>
 
         <div className='leafletContainer'>
           <MapContainer
             style={{ height: '100%', width: '100%' }}
-            center={[listing.geolocation.lat, listing.geolocation.lng]}
+            center={[listing.latitude, listing.longitude]}
             zoom={13}
             scrollWheelZoom={false}
           >
@@ -124,9 +140,9 @@ function Listing() {
             />
 
             <Marker
-              position={[listing.geolocation.lat, listing.geolocation.lng]}
+              position={[listing.latitude, listing.longitude]}
             >
-              <Popup>{listing.location}</Popup>
+              <Popup>{listing.street_name}</Popup>
             </Marker>
           </MapContainer>
         </div>

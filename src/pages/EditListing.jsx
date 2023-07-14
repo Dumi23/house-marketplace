@@ -12,206 +12,146 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { v4 as uuidv4 } from 'uuid'
 import Spinner from '../components/Spinner'
+import axios from 'axios'
+import Select from 'react-select'
 
 function EditListing() {
-  // eslint-disable-next-line
   const [geolocationEnabled, setGeolocationEnabled] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [listing, setListing] = useState(false)
+  const [types, setTypes] = useState([])
+  const [music, setMusic] = useState([])
+  const [listing, setListing] = useState({})
+  const [locationSelect, setLocationSelect] = useState()
+  const [selectedMusic, setSelectedMusic] = useState([])
+  const [savedLocale, setSavedLocale] = useState({})
+  const [search, setSearch] = useState("")
+  const [location, setLocation] = useState([])
   const [formData, setFormData] = useState({
     type: 'rent',
     name: '',
-    bedrooms: 1,
-    bathrooms: 1,
-    parking: false,
-    furnished: false,
-    address: '',
-    offer: false,
-    regularPrice: 0,
-    discountedPrice: 0,
-    images: {},
+    description: '',
+    street_name: '',
+    image: {},
     latitude: 0,
     longitude: 0,
+    location_slug: '',
+    slug_music: []
   })
 
   const {
     type,
     name,
-    bedrooms,
-    bathrooms,
-    parking,
-    furnished,
-    address,
-    offer,
-    regularPrice,
-    discountedPrice,
-    images,
+    description,
+    street_name,
+    image,
     latitude,
     longitude,
+    slug_music,
+    location_slug,
   } = formData
 
+  const params = useParams()
   const auth = getAuth()
   const navigate = useNavigate()
-  const params = useParams()
   const isMounted = useRef(true)
 
-  // Redirect if listing is not user's
-  useEffect(() => {
-    if (listing && listing.userRef !== auth.currentUser.uid) {
-      toast.error('You can not edit that listing')
-      navigate('/')
-    }
-  })
 
-  // Fetch listing to edit
-  useEffect(() => {
-    setLoading(true)
-    const fetchListing = async () => {
-      const docRef = doc(db, 'listings', params.listingId)
-      const docSnap = await getDoc(docRef)
-      if (docSnap.exists()) {
-        setListing(docSnap.data())
-        setFormData({ ...docSnap.data(), address: docSnap.data().location })
-        setLoading(false)
-      } else {
-        navigate('/')
-        toast.error('Listing does not exist')
-      }
-    }
+  const fetchMusic = async () => {
+    await axios.get(`http://127.0.0.1:8000/club/music?search=${search}`).then((response) =>{setMusic(response.data.results)}).catch(error => console.log(error))
+  }
 
-    fetchListing()
-  }, [params.listingId, navigate])
-
-  // Sets userRef to logged in user
   useEffect(() => {
-    if (isMounted) {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          setFormData({ ...formData, userRef: user.uid })
-        } else {
-          navigate('/sign-in')
+      if (isMounted) {
+        axios.get("http://127.0.0.1:8000/club/location").then((response) => setLocation(response.data.results)).catch(error => console.log(error))
+        axios.get("http://127.0.0.1:8000/club/types").then((response) => setTypes(response.data.results)).catch(error => console.log(error))
+        fetchMusic()
+        axios.get(`http://127.0.0.1:8000/club/locale/${params.listingId}`).then((response) => {setListing(response.data)}).catch((error) => toast.error("Something went wrong"))
+        if (listing) {
+          setLoading(false)
         }
-      })
-    }
+      }
 
     return () => {
       isMounted.current = false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted])
+  }, [isMounted, navigate, params.listingSlug])
+
+  console.log(params)
+
+  const selectStyle = {
+    control: styles => ({...styles, boxShadow: 'rgba(0, 0, 0, 0.11)', border: "none", background: "#ffffff", borderRadius:"3rem",   height: "3rem",   width: "100%",  outline: "none",   fontFamily: "'Montserrat', sans-serif",   padding:"0 3rem", fontSize:"1rem"})
+  }
+
+  const handleChange = charEntered => {
+    setSearch(charEntered);
+    fetchMusic();
+  };
+
+  const handleLocationValueChange = (r) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      location_slug: r.slug
+    }))
+  }
+
+  const handleValueChange = (e) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      slug_music: Array.isArray(e) ? e.map(x => x.slug): []
+    }))
+  }
+
+
 
   const onSubmit = async (e) => {
     e.preventDefault()
 
     setLoading(true)
 
-    if (discountedPrice >= regularPrice) {
-      setLoading(false)
-      toast.error('Discounted price needs to be less than regular price')
-      return
-    }
 
-    if (images.length > 6) {
+    if (image.length > 1) {
       setLoading(false)
-      toast.error('Max 6 images')
+      toast.error('Only one image can be uploaded (coming soon)')
       return
     }
 
     let geolocation = {}
-    let location
+    let locationResp
 
     if (geolocationEnabled) {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${address}&key=${process.env.REACT_APP_GEOCODE_API_KEY}`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${street_name}&key=AIzaSyBfd-WfPA5-DfRsJJ-Ct7GY55DOlg2iaw8`
       )
 
       const data = await response.json()
-
+      
+      console.log(data.results[0]?.geometry.location.lat ?? 0)
       geolocation.lat = data.results[0]?.geometry.location.lat ?? 0
       geolocation.lng = data.results[0]?.geometry.location.lng ?? 0
 
-      location =
+      locationResp =
         data.status === 'ZERO_RESULTS'
           ? undefined
           : data.results[0]?.formatted_address
 
-      if (location === undefined || location.includes('undefined')) {
+      if (locationResp === undefined || locationResp.includes('undefined')) {
         setLoading(false)
         toast.error('Please enter a correct address')
         return
       }
     } else {
-      geolocation.lat = latitude
-      geolocation.lng = longitude
+      setFormData((prevState) => ({...prevState, latitude: geolocation.lat}))
+      setFormData((prevState) => ({...prevState, latitude: geolocation.lng}))
     }
 
-    // Store image in firebase
-    const storeImage = async (image) => {
-      return new Promise((resolve, reject) => {
-        const storage = getStorage()
-        const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`
+    // Send a post for create
+    axios.post('http://127.0.0.1:8000/club/locale/create', formData, {
+    headers: {'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'multipart/form-data'}}
+    ).then((response) => navigate(`/category/${response.data['type']['name']}/${response.data['slug']}`)).catch(error => console.log(error))
 
-        const storageRef = ref(storage, 'images/' + fileName)
-
-        const uploadTask = uploadBytesResumable(storageRef, image)
-
-        uploadTask.on(
-          'state_changed',
-          (snapshot) => {
-            const progress =
-              (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-            console.log('Upload is ' + progress + '% done')
-            switch (snapshot.state) {
-              case 'paused':
-                console.log('Upload is paused')
-                break
-              case 'running':
-                console.log('Upload is running')
-                break
-              default:
-                break
-            }
-          },
-          (error) => {
-            reject(error)
-          },
-          () => {
-            // Handle successful uploads on complete
-            // For instance, get the download URL: https://firebasestorage.googleapis.com/...
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-              resolve(downloadURL)
-            })
-          }
-        )
-      })
-    }
-
-    const imgUrls = await Promise.all(
-      [...images].map((image) => storeImage(image))
-    ).catch(() => {
-      setLoading(false)
-      toast.error('Images not uploaded')
-      return
-    })
-
-    const formDataCopy = {
-      ...formData,
-      imgUrls,
-      geolocation,
-      timestamp: serverTimestamp(),
-    }
-
-    formDataCopy.location = address
-    delete formDataCopy.images
-    delete formDataCopy.address
-    !formDataCopy.offer && delete formDataCopy.discountedPrice
-
-    // Update listing
-    const docRef = doc(db, 'listings', params.listingId)
-    await updateDoc(docRef, formDataCopy)
     setLoading(false)
-    toast.success('Listing saved')
-    navigate(`/category/${formDataCopy.type}/${docRef.id}`)
+    toast.success('Locale created')
   }
 
   const onMutate = (e) => {
@@ -228,7 +168,7 @@ function EditListing() {
     if (e.target.files) {
       setFormData((prevState) => ({
         ...prevState,
-        images: e.target.files,
+        image: e.target.files,
       }))
     }
 
@@ -244,36 +184,29 @@ function EditListing() {
   if (loading) {
     return <Spinner />
   }
-
+  console.log(formData)
   return (
     <div className='profile'>
       <header>
-        <p className='pageHeader'>Edit Listing</p>
+        <p className='pageHeader'>Edit a locale</p>
       </header>
 
       <main>
         <form onSubmit={onSubmit}>
-          <label className='formLabel'>Sell / Rent</label>
+          <label className='formLabel'>Locale Type</label>
+          {types.map((data) =>
           <div className='formButtons'>
             <button
               type='button'
-              className={type === 'sale' ? 'formButtonActive' : 'formButton'}
+              className={type === data.slug ? 'formButtonActive' : 'formButton'}
               id='type'
-              value='sale'
+              value={data.slug}
               onClick={onMutate}
             >
-              Sell
-            </button>
-            <button
-              type='button'
-              className={type === 'rent' ? 'formButtonActive' : 'formButton'}
-              id='type'
-              value='rent'
-              onClick={onMutate}
-            >
-              Rent
+              {data.name}
             </button>
           </div>
+          )}
 
           <label className='formLabel'>Name</label>
           <input
@@ -287,200 +220,71 @@ function EditListing() {
             required
           />
 
-          <div className='formRooms flex'>
-            <div>
-              <label className='formLabel'>Bedrooms</label>
-              <input
-                className='formInputSmall'
-                type='number'
-                id='bedrooms'
-                value={bedrooms}
-                onChange={onMutate}
-                min='1'
-                max='50'
-                required
-              />
-            </div>
-            <div>
-              <label className='formLabel'>Bathrooms</label>
-              <input
-                className='formInputSmall'
-                type='number'
-                id='bathrooms'
-                value={bathrooms}
-                onChange={onMutate}
-                min='1'
-                max='50'
-                required
-              />
-            </div>
-          </div>
+          <label className='formLabel'>Description</label>
+          <textarea
+            className='formInputAddress'
+            type='text'
+            id='description'
+            value={description}
+            onChange={onMutate}
+            required
+          />
 
-          <label className='formLabel'>Parking spot</label>
-          <div className='formButtons'>
-            <button
-              className={parking ? 'formButtonActive' : 'formButton'}
-              type='button'
-              id='parking'
-              value={true}
-              onClick={onMutate}
-              min='1'
-              max='50'
-            >
-              Yes
-            </button>
-            <button
-              className={
-                !parking && parking !== null ? 'formButtonActive' : 'formButton'
-              }
-              type='button'
-              id='parking'
-              value={false}
-              onClick={onMutate}
-            >
-              No
-            </button>
-          </div>
+            <label className='formLabel'> Music </label>
+            <Select
+              styles={selectStyle}
+              isMulti
+              defaultInputValue=''
+              onChange={handleValueChange}
+              className="selectMusic"
+              onInputChange={handleChange}
+              options={music}
+              getOptionLabel={(music) => music['genre']}
+              getOptionValue ={(music) => music['slug']}
+            />
 
-          <label className='formLabel'>Furnished</label>
-          <div className='formButtons'>
-            <button
-              className={furnished ? 'formButtonActive' : 'formButton'}
-              type='button'
-              id='furnished'
-              value={true}
-              onClick={onMutate}
-            >
-              Yes
-            </button>
-            <button
-              className={
-                !furnished && furnished !== null
-                  ? 'formButtonActive'
-                  : 'formButton'
-              }
-              type='button'
-              id='furnished'
-              value={false}
-              onClick={onMutate}
-            >
-              No
-            </button>
-          </div>
+          <label className='formLabel'> Location
+            <Select
+              styles={selectStyle}
+              defaultInputValue=''
+              onChange={handleLocationValueChange}
+              className="selectMusic"
+              options={location}
+              getOptionLabel={(location) => location['name']}
+              getOptionValue ={(location) => location['slug']}
+            />
+          </label>  
 
           <label className='formLabel'>Address</label>
           <textarea
             className='formInputAddress'
             type='text'
-            id='address'
-            value={address}
+            id='street_name'
+            value={listing["street_name"]}
             onChange={onMutate}
             required
           />
 
-          {!geolocationEnabled && (
-            <div className='formLatLng flex'>
-              <div>
-                <label className='formLabel'>Latitude</label>
-                <input
-                  className='formInputSmall'
-                  type='number'
-                  id='latitude'
-                  value={latitude}
-                  onChange={onMutate}
-                  required
-                />
-              </div>
-              <div>
-                <label className='formLabel'>Longitude</label>
-                <input
-                  className='formInputSmall'
-                  type='number'
-                  id='longitude'
-                  value={longitude}
-                  onChange={onMutate}
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          <label className='formLabel'>Offer</label>
-          <div className='formButtons'>
-            <button
-              className={offer ? 'formButtonActive' : 'formButton'}
-              type='button'
-              id='offer'
-              value={true}
-              onClick={onMutate}
-            >
-              Yes
-            </button>
-            <button
-              className={
-                !offer && offer !== null ? 'formButtonActive' : 'formButton'
-              }
-              type='button'
-              id='offer'
-              value={false}
-              onClick={onMutate}
-            >
-              No
-            </button>
-          </div>
-
-          <label className='formLabel'>Regular Price</label>
-          <div className='formPriceDiv'>
-            <input
-              className='formInputSmall'
-              type='number'
-              id='regularPrice'
-              value={regularPrice}
-              onChange={onMutate}
-              min='50'
-              max='750000000'
-              required
-            />
-            {type === 'rent' && <p className='formPriceText'>$ / Month</p>}
-          </div>
-
-          {offer && (
-            <>
-              <label className='formLabel'>Discounted Price</label>
-              <input
-                className='formInputSmall'
-                type='number'
-                id='discountedPrice'
-                value={discountedPrice}
-                onChange={onMutate}
-                min='50'
-                max='750000000'
-                required={offer}
-              />
-            </>
-          )}
-
           <label className='formLabel'>Images</label>
           <p className='imagesInfo'>
-            The first image will be the cover (max 6).
+            The first image will be the cover (max 1).
           </p>
           <input
             className='formInputFile'
             type='file'
-            id='images'
+            id='image'
             onChange={onMutate}
-            max='6'
+            max='1'
             accept='.jpg,.png,.jpeg'
             multiple
             required
           />
           <button type='submit' className='primaryButton createListingButton'>
-            Edit Listing
+            Edit Locale
           </button>
         </form>
       </main>
     </div>
   )
 }
-
 export default EditListing

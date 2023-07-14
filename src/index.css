@@ -59,7 +59,7 @@ button {
 
 .primaryButton {
   cursor: pointer;
-  background: #00cc66;
+  background: #c8bfe7;
   border-radius: 1rem;
   padding: 0.85rem 2rem;
   color: #ffffff;
@@ -630,7 +630,7 @@ button {
   font-size: 1rem;
   font-weight: 600;
   color: #ffffff;
-  background-color: #00cc66;
+  background-color: #c8bfe7;
   padding: 0.25rem 0.75rem;
   border-radius: 1rem;
 }
@@ -648,7 +648,7 @@ button {
 .changePersonalDetails {
   cursor: pointer;
   font-weight: 600;
-  color: #00cc66;
+  color: #c8bfe7;
 }
 
 .profileCard {
@@ -712,7 +712,7 @@ button {
 }
 
 .lisitingsList {
-  padding: 0;
+  padding-left: 0;
 }
 
 .formLabel {
@@ -744,7 +744,7 @@ button {
   width: 100%;
 }
 .formButtonActive {
-  background-color: #00cc66;
+  background-color: #c8bfe7;
   color: #ffffff;
 }
 
@@ -824,4 +824,42 @@ button {
   margin-left: 1rem;
   font-size: 0.8rem;
   opacity: 0.75;
+}
+
+
+body.active-modal {
+  overflow-y: hidden;
+}
+
+.modal, .overlay {
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  position: fixed;
+}
+
+.overlay {
+  background: rgba(49,49,49,0.8);
+}
+.modal-content {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  line-height: 1.4;
+  background: #f1f1f1;
+  padding: 14px 28px;
+  border-radius: 3px;
+  max-width: 600px;
+  min-width: 300px;
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 5px 7px;
 }

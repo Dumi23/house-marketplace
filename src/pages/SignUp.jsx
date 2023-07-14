@@ -23,11 +23,11 @@ function SignUp() {
   const [error, setError] = useState(null)
   const [typeOf, setTypeOf] = useState()
   const [formData, setFormData] = useState({
-    type: 1,
-    name: '',
+    type: 2,
+    username: '',
     email: '',
     password: '',
-    music: music,
+    music_slug: [],
   })
 
 
@@ -43,7 +43,7 @@ function SignUp() {
 
   console.log(music)
 
-  const { name, email, password } = formData
+  const {type, username, email, password, music_slug} = formData
 
   const onMutate = (e) => {
     let boolean = null
@@ -54,8 +54,23 @@ function SignUp() {
     if (e.target.value === 'false') {
       boolean = false
     }
+
+    if (!e.target.files) {
+      setFormData((prevState) => ({
+        ...prevState,
+        [e.target.id]: boolean ?? e.target.value,
+      }))
+    }
   }
 
+  const handleValueChange = (e) => {
+    setFormData((prevState) => ({
+      ...prevState,
+      slug_music: Array.isArray(e) ? e.map(x => x.slug): []
+    }))
+  }
+
+  console.log(type)
 
   const navigate = useNavigate()
 
@@ -75,27 +90,8 @@ function SignUp() {
     e.preventDefault()
 
     try {
-      const auth = getAuth()
+      return axios.post('http://127.0.0.1:8000/api/register', formData).then((response) =>{toast.success(response.data['message'])}).catch((error) => {toast.error("Something went wrong during registration")})
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      )
-
-      const user = userCredential.user
-
-      updateProfile(auth.currentUser, {
-        displayName: name,
-      })
-
-      const formDataCopy = { ...formData }
-      delete formDataCopy.password
-      formDataCopy.timestamp = serverTimestamp()
-
-      await setDoc(doc(db, 'users', user.uid), formDataCopy)
-
-      navigate('/')
     } catch (error) {
       toast.error('Something went wrong with registration')
     }
@@ -115,8 +111,8 @@ function SignUp() {
             type='text'
             className='nameInput'
             placeholder='Name'
-            id='name'
-            value={name}
+            id='username'
+            value={username}
             onChange={onChange}
           />
           <input
@@ -147,7 +143,7 @@ function SignUp() {
             <div className='formButtons' style={{marginBottom:"10px", marginTop:"-25px"}}>
               <button
                 type='button'
-                className={typeOf === 0 ? 'formButtonActive' : 'formButton'}
+                className={type == 0 ? 'formButtonActive' : 'formButton'}
                 id='type'
                 value={0}
                 onClick={onMutate}
@@ -156,7 +152,7 @@ function SignUp() {
               </button>
               <button
                 type='button'
-                className={typeOf === 1 ? 'formButtonActive' : 'formButton'}
+                className={type == 1 ? 'formButtonActive' : 'formButton'}
                 id='type'
                 value={1}
                 onClick={onMutate}
@@ -169,6 +165,7 @@ function SignUp() {
             <Select
               styles={selectStyle}
               isMulti
+              onChange={handleValueChange}
               defaultInputValue=''
               className="selectMusic"
               onInputChange={handleChange}
@@ -179,9 +176,6 @@ function SignUp() {
             </div>
           </div>
 
-          <Link to='/forgot-password' className='forgotPasswordLink'>
-            Forgot Password
-          </Link>
 
 
           <div className='signUpBar'>
@@ -191,8 +185,6 @@ function SignUp() {
             </button>
           </div>
         </form>
-
-        <OAuth />
 
         <Link to='/sign-in' className='registerLink'>
           Sign In Instead

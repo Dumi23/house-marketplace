@@ -1,0 +1,8 @@
+{
+    "appId": "io.ionic.gout",
+    "appName": "gout",
+    "bundledWebRuntime": false,
+    "npmClient": "npm",
+    "webDir": "build",
+    "cordova": {}
+  }
